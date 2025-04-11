@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Upload, X, AlertCircle, FileText, Activity } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
+// import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 
 const SuricataDashboard = () => {
   const [file, setFile] = useState(null);
@@ -10,37 +10,33 @@ const SuricataDashboard = () => {
   const [error, setError] = useState(null);
 
   // Simulated processing function (in a real app, this would call your Python backend)
-  const processFile = () => {
+  // Replace the mock processFile function with this real API call:
+  const processFile = async () => {
     if (!file) return;
     
     setIsProcessing(true);
     setError(null);
     
-    // Simulate backend processing
-    setTimeout(() => {
-      try {
-        // Mock results based on your script's output format
-        setResults({
-          totalProcessed: 156,
-          classCounts: {
-            'BENIGN': 102,
-            'DoS': 28,
-            'Port Scan': 19,
-            'DDoS': 7
-          },
-          avgProbability: 0.9234,
-          recentEntries: [
-            { timestamp: "2025-04-03T14:32:15.000Z", src_ip: "192.168.1.54", dest_ip: "45.33.32.156", prediction: "BENIGN", probability: 0.9823 },
-            { timestamp: "2025-04-03T14:32:14.000Z", src_ip: "192.168.1.105", dest_ip: "104.16.133.229", prediction: "Port Scan", probability: 0.9645 },
-            { timestamp: "2025-04-03T14:32:10.000Z", src_ip: "192.168.1.22", dest_ip: "198.51.100.33", prediction: "DoS", probability: 0.8893 }
-          ]
-        });
-        setIsProcessing(false);
-      } catch (err) {
-        setError("Failed to process the file. Please check the format and try again.");
-        setIsProcessing(false);
-      }
-    }, 2000);
+    // Create a FormData object to send the file
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+      // Make actual API call to your backend
+      const response = await axios.post('http://localhost:5000/api/process', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      // Set results from actual backend processing
+      setResults(response.data);
+      setIsProcessing(false);
+    } catch (err) {
+      console.error('Error processing file:', err);
+      setError(err.response?.data?.error || "Failed to process the file. Please check the format and try again.");
+      setIsProcessing(false);
+    }
   };
 
   const handleFileChange = (e) => {
@@ -183,32 +179,43 @@ const SuricataDashboard = () => {
             <div className="bg-gray-800 rounded-lg p-6 shadow-lg col-span-2">
               <h2 className="text-xl font-semibold mb-4">Classification Distribution</h2>
               <div className="space-y-6">
-                {Object.entries(results.classCounts).map(([label, count]) => (
-                  <div key={label}>
-                    <div className="flex justify-between mb-1">
-                      <span className={`
-                        ${label === 'BENIGN' ? 'text-green-400' : ''}
-                        ${label === 'DoS' ? 'text-yellow-400' : ''}
-                        ${label === 'Port Scan' ? 'text-orange-400' : ''}
-                        ${label === 'DDoS' ? 'text-red-400' : ''}
-                      `}>
-                        {label}
-                      </span>
-                      <span>{count} ({(count / results.totalProcessed * 100).toFixed(1)}%)</span>
-                    </div>
-                    <div className="w-full bg-gray-700 rounded-full h-2.5">
-                      <div 
-                        className={`h-2.5 rounded-full ${
-                          label === 'BENIGN' ? 'bg-green-400' : 
-                          label === 'DoS' ? 'bg-yellow-400' : 
-                          label === 'Port Scan' ? 'bg-orange-400' : 
-                          'bg-red-400'
-                        }`}
-                        style={{ width: `${getPercentage(count)}%` }}
-                      ></div>
-                    </div>
+              {Object.entries(results.classCounts).map(([label, count]) => (
+                <div key={label}>
+                  <div className="flex justify-between mb-1">
+                    <span className={`
+                      ${label === 'Normal Traffic' ? 'text-green-400' : ''}
+                      ${label === 'DoS' ? 'text-yellow-400' : ''}
+                      ${label === 'Port Scan' ? 'text-orange-400' : ''}
+                      ${label === 'DDoS' ? 'text-red-400' : ''}
+                      ${label === 'Ping Attack' ? 'text-blue-400' : ''}
+                      ${label === 'Malware' ? 'text-purple-400' : ''}
+                      ${label === 'DNS Abuse' ? 'text-pink-400' : ''}
+                      ${label === 'Fake DNS' ? 'text-indigo-400' : ''}
+                      ${label === 'SQL Injection' ? 'text-rose-400' : ''}
+                    `}>
+                      {label}
+                    </span>
+                    <span>{count} ({(count / results.totalProcessed * 100).toFixed(1)}%)</span>
                   </div>
-                ))}
+                  <div className="w-full bg-gray-700 rounded-full h-2.5">
+                    <div 
+                      className={`h-2.5 rounded-full ${
+                        label === 'Normal Traffic' ? 'bg-green-400' : 
+                        label === 'DoS' ? 'bg-yellow-400' : 
+                        label === 'Port Scan' ? 'bg-orange-400' : 
+                        label === 'DDoS' ? 'bg-red-400' :
+                        label === 'Ping Attack' ? 'bg-blue-400' :
+                        label === 'Malware' ? 'bg-purple-400' :
+                        label === 'DNS Abuse' ? 'bg-pink-400' :
+                        label === 'Fake DNS' ? 'bg-indigo-400' :
+                        label === 'SQL Injection' ? 'bg-rose-400' :
+                        'bg-gray-400'
+                      }`}
+                      style={{ width: `${getPercentage(count)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
               </div>
             </div>
             
@@ -222,7 +229,6 @@ const SuricataDashboard = () => {
                       <th className="pb-3">Timestamp</th>
                       <th className="pb-3">Source IP</th>
                       <th className="pb-3">Destination IP</th>
-                      <th className="pb-3">Prediction</th>
                       <th className="pb-3">Probability</th>
                     </tr>
                   </thead>
@@ -233,27 +239,24 @@ const SuricataDashboard = () => {
                         <td className="py-3">{entry.src_ip}</td>
                         <td className="py-3">{entry.dest_ip}</td>
                         <td className="py-3">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            entry.prediction === 'BENIGN' ? 'bg-green-900 text-green-300' : 
-                            entry.prediction === 'DoS' ? 'bg-yellow-900 text-yellow-300' : 
-                            entry.prediction === 'Port Scan' ? 'bg-orange-900 text-orange-300' : 
-                            'bg-red-900 text-red-300'
-                          }`}>
-                            {entry.prediction}
-                          </span>
-                        </td>
-                        <td className="py-3">
                           <div className="flex items-center">
-                            <div className="w-16 bg-gray-700 rounded-full h-1.5 mr-2">
-                              <div 
-                                className={`h-1.5 rounded-full ${
-                                  entry.prediction === 'BENIGN' ? 'bg-green-400' : 
-                                  entry.prediction === 'DoS' ? 'bg-yellow-400' : 
-                                  entry.prediction === 'Port Scan' ? 'bg-orange-400' : 'bg-red-400'
-                                }`}
-                                style={{ width: `${entry.probability * 100}%` }}
-                              ></div>
-                            </div>
+                          <div className="w-16 bg-gray-700 rounded-full h-1.5 mr-2">
+                            <div 
+                              className={`h-1.5 rounded-full ${
+                                entry.prediction === 'Normal Traffic' ? 'bg-green-400' : 
+                                entry.prediction === 'DoS' ? 'bg-yellow-400' : 
+                                entry.prediction === 'Port Scan' ? 'bg-orange-400' : 
+                                entry.prediction === 'DDoS' ? 'bg-red-400' :
+                                entry.prediction === 'Ping Attack' ? 'bg-blue-400' :
+                                entry.prediction === 'Malware' ? 'bg-purple-400' :
+                                entry.prediction === 'DNS Abuse' ? 'bg-pink-400' :
+                                entry.prediction === 'Fake DNS' ? 'bg-indigo-400' :
+                                entry.prediction === 'SQL Injection' ? 'bg-rose-400' :
+                                'bg-gray-400'
+                              }`}
+                              style={{ width: `${entry.probability * 100}%` }}
+                            ></div>
+                          </div>
                             {entry.probability.toFixed(4)}
                           </div>
                         </td>

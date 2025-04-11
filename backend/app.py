@@ -17,8 +17,9 @@ UPLOAD_FOLDER = 'uploads'
 OUTPUT_FOLDER = 'output'
 MODEL_PATH = 'model/ml_model_xgboost.pkl'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limit to 16MB
+# app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limit to 16MB
 
+# Replace the process_file function:
 @app.route('/api/process', methods=['POST'])
 def process_file():
     # Check if the post request has the file part
@@ -46,41 +47,32 @@ def process_file():
         try:
             # Process the file using your existing class
             suricata_ml = SuricataMLIntegration(MODEL_PATH, file_path, output_path)
-            suricata_ml.process_eve_log(simulate=False)
             
-            # Read output file to get results
+            # Process log and get summary results
+            summary = suricata_ml.process_eve_log(simulate=False)
+            
+            # Read output file to get recent entries for UI
             recent_entries = []
-            class_counts = {'BENIGN': 0, 'DoS': 0, 'Port Scan': 0, 'DDoS': 0}
-            total_prob = 0
-            total_entries = 0
             
             with open(output_path, 'r') as f:
                 for line in f:
                     entry = json.loads(line)
                     if 'ml_prediction' in entry:
-                        total_entries += 1
-                        label = entry['ml_prediction']['label']
-                        probability = entry['ml_prediction']['probability']
-                        
-                        class_counts[label] = class_counts.get(label, 0) + 1
-                        total_prob += probability
-                        
                         # Keep only the most recent entries for the UI
                         if len(recent_entries) < 10:
                             recent_entries.append({
                                 'timestamp': entry.get('timestamp', ''),
                                 'src_ip': entry.get('src_ip', ''),
                                 'dest_ip': entry.get('dest_ip', ''),
-                                'prediction': label,
-                                'probability': probability
+                                'prediction': entry['ml_prediction']['label'],
+                                'probability': entry['ml_prediction']['probability']
                             })
             
-            avg_probability = total_prob / total_entries if total_entries else 0
-            
+            # Update the results structure
             results = {
-                'totalProcessed': total_entries,
-                'classCounts': class_counts,
-                'avgProbability': avg_probability,
+                'totalProcessed': summary['totalProcessed'],
+                'classCounts': summary['classCounts'],
+                'avgProbability': summary['avgProbability'],
                 'recentEntries': recent_entries
             }
             
